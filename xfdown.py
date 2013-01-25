@@ -50,17 +50,6 @@ def get_gtk(strs):
     return hash & 0x7fffffff
 
 
-class LWPCookieJar(cookiejar.LWPCookieJar):
-    def save(self, filename=None, ignore_discard=False, ignore_expires=False, userinfo=''):
-        if filename is None:
-            if self.filename is not None: filename = self.filename
-            else: raise ValueError(cookiejar.MISSING_FILENAME_TEXT)
-
-        with open(filename, "wb") as f:
-            f.write("#LWP-Cookies-2.0\n#%s\n" % (userinfo or ''))
-            f.write(self.as_lwp_str(ignore_discard, ignore_expires))
-
-
 class XF:
     """
      Login QQ
@@ -69,6 +58,10 @@ class XF:
     __cookiepath = '%s/cookie' % module_path
     __verifyimg = '%s/verify.jpg' % module_path
     __RE = re.compile("(\d+) *([^\d ]+)?")
+
+    def __init__(self, qq, password_hash):
+        self.__qq = qq
+        self.hashpasswd = password_hash
 
     def __preprocess(self, password=None, verifycode=None, hashpasswd=None):
         if not hashpasswd:
@@ -92,7 +85,7 @@ class XF:
         return hashlib.md5(item).hexdigest().upper()
 
     def start(self):
-        self.cookieJar = LWPCookieJar(self.__cookiepath)
+        self.cookieJar = cookiejar.LWPCookieJar(self.__cookiepath)
 
         cookieload = False
 
@@ -127,10 +120,7 @@ class XF:
         except UnicodeDecodeError:
             pass
 
-        if hasattr(self, "pswd"):
-            self.cookieJar.save(ignore_discard=True, ignore_expires=True, userinfo="%s#%s" % (self.__qq, self.hashpasswd))
-        else:
-            self.cookieJar.save(ignore_discard=True, ignore_expires=True)
+        self.cookieJar.save(ignore_discard=True, ignore_expires=True)
 
         fp.close()
         return result
@@ -143,10 +133,8 @@ class XF:
         verify = list(verify)
         if verify[0] == '1':
             imgurl = "http://captcha.qq.com/getimage?aid=567008010&r=%s&uin=%s" % (random.Random().random(), self.__qq)
-            f = open(self.__verifyimg, "wb")
-            fp = request.urlopen(imgurl)
-            f.write(fp.read())
-            f.close()
+            with open(self.__verifyimg, "wb") as f:
+                f.write(request.urlopen(imgurl).read())
             try:
                 subprocess.Popen(['xdg-open', self.__verifyimg])
             except:
@@ -355,42 +343,16 @@ class XF:
         """
         登录
         """
-        if not needinput and not verify:
-            with open(self.__cookiepath) as f:
-                line = f.readlines()[1].strip()
-                lists = line.split("#")
-                self.__qq = lists[1]
-                self.hashpasswd = lists[2]
-        if not hasattr(self, "hashpasswd") or needinput:
-            self.__qq = raw_input('QQ：')
-            import getpass
-
-            self.pswd = getpass.getpass('PASSWD: ')
-            self.pswd = self.pswd.strip()
-        self.__qq = self.__qq.strip()
         self.__verifycode = self.__getverifycode()
-        if not hasattr(self, "hashpasswd") or needinput:
-            self.passwd = self.__preprocess(
-                self.pswd,
-                self.__verifycode
-            )
-        else:
-            self.passwd = self.__preprocess(
-                verifycode=self.__verifycode,
-                hashpasswd=self.hashpasswd
-            )
-        _print("登录中...")
+        self.passwd = self.__preprocess(
+            verifycode=self.__verifycode,
+            hashpasswd=self.hashpasswd
+        )
         self.__request_login()
 
-
-def usage():
-    print("QQxf offline download utility (you need aria2 installed to use).\n")
-    print("  -h,--help\tshow this usage and exit.")
-    print("  -d <dir>,--downloaddir=<dir>\n\tset the download dir.")
-    print("\n\nsee https://github.com/kikyous/xfdown for most newest version and more information")
-
 def main():
-    xf = XF()
+    f = open('credential', 'rb')
+    xf = XF(f.next().strip(), f.next().strip())
     xf.start()
 
 if __name__ == '__main__':
