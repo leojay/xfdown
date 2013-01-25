@@ -4,6 +4,8 @@ from __future__ import division
 
 import random
 import json, os, sys, re, hashlib
+import subprocess
+from os.path import dirname, exists
 
 HANDLER = 'http://lixian.qq.com/handler/lixian/'
 
@@ -69,6 +71,9 @@ class TaskInfo(object):
 
     def is_completed(self):
         return self.file_size > 0 and self.file_size == self.completed_size
+
+    def get_native_name(self):
+        return self.filename.replace('\\', os.sep)
 
 class XF:
     """
@@ -211,12 +216,14 @@ class XF:
         cookie = re.search(r'\"com_cookie":\"(.+?)\"\,\"', result).group(1)
         return url, cookie
 
-    def get_aria2c_cmd_line(self, task):
+    def get_axel_cmd_line(self, task):
         """
         @type task: TaskInfo
         """
         url, cookie = self.get_download_info(task)
-        return "aria2c -c -s10 -x10 --header 'Cookie:ptisp=edu; FTN5K=%s' '%s'" % (cookie, url)
+        name = task.get_native_name()
+        header = 'Cookie:ptisp=edu; FTN5K=%s' % cookie
+        return ['axel', '-n', '20', '-q', '-o', name, '-H', header, url]
 
     def delete_task(self, task):
         """
@@ -241,15 +248,43 @@ class XF:
             return True
         return False
 
+
+import threading
+N = 5
+semaphore = threading.Semaphore(N)
+xf_lock = threading.Lock()
+xf = None
+
+def download_task(cmd, task):
+    try:
+        if exists('stop'):
+            return
+        subprocess.call(cmd)
+        with xf_lock:
+            xf.delete_task(task)
+    finally:
+        semaphore.release()
+
 def main():
+    global xf
     f = open('credential', 'rb')
     xf = XF(f.next().strip(), f.next().strip())
     xf.start()
+
     for task in xf.list_tasks():
-        print task.filename, task.completed_size, task.file_size
         if task.is_completed():
-            print xf.get_aria2c_cmd_line(task)
-            print
+            name = task.get_native_name()
+            print 'Downloading:', name
+            dir = dirname(name)
+            if dir and not exists(dir):
+                os.makedirs(dir)
+            semaphore.acquire()
+
+            threading.Thread(target=download_task, args=(xf.get_axel_cmd_line(task), task)).start()
+
+    for i in range(N):
+        semaphore.acquire()
+
 
 if __name__ == '__main__':
     main()
