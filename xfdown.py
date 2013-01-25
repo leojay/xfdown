@@ -6,6 +6,15 @@ import subprocess
 import random
 import json, os, sys, re, hashlib
 
+HANDLER = 'http://lixian.qq.com/handler/lixian/'
+
+ADD_URL = HANDLER + 'add_to_lixian.php'
+DELETE_URL = HANDLER + 'del_lixian_task.php'
+DOWNLOAD_INFO_URL = HANDLER + 'get_http_url.php'
+LOGIN_URL = HANDLER + 'do_lixian_login.php'
+LIST_URL = HANDLER + 'get_lixian_list.php'
+CHECK_TOKEN_URL = HANDLER + 'check_tc.php'
+
 try:
     import urllib as parse
     import urllib2 as request
@@ -128,7 +137,7 @@ class XF:
     def __getverifycode(self):
         urlv = 'http://check.ptlogin2.qq.com/check?uin=%s&appid=567008010&r=%s' % (self.__qq, random.Random().random())
 
-        str = self.__request(url=urlv)
+        str = self.__request(urlv)
         verify = eval(str.split("(")[1].split(")")[0])
         verify = list(verify)
         if verify[0] == '1':
@@ -148,7 +157,7 @@ class XF:
 
     def __request_login(self):
         urlv = "http://ptlogin2.qq.com/login?u=%s&p=%s&verifycode=%s" % (self.__qq, self.passwd, self.__verifycode[1]) + "&aid=567008010&u1=http%3A%2F%2Flixian.qq.com%2Fmain.html&h=1&ptredirect=1&ptlang=2052&from_ui=1&dumy=&fp=loginerroralert&action=2-10-&mibao_css=&t=1&g=1"
-        str = self.__request(url=urlv)
+        str = self.__request(urlv)
         if str.find(_('登录成功')) != -1:
             self.__getlogin()
             self.main()
@@ -178,17 +187,15 @@ class XF:
         return filename.split("?")[0]
 
     def __getlogin(self):
-        self.__request(url="http://lixian.qq.com/handler/lixian/check_tc.php", data={})
-        urlv = 'http://lixian.qq.com/handler/lixian/do_lixian_login.php'
+        self.__request(CHECK_TOKEN_URL)
         skey = re.findall('skey="([^"]+)"', open(self.__cookiepath).read())[0]
-        return self.__request(url=urlv, data={"g_tk": get_gtk(skey)})
+        return self.__request(LOGIN_URL, {"g_tk": get_gtk(skey)})
 
     def __getlist(self):
         """
         得到任务名与hash值
         """
-        urlv = 'http://lixian.qq.com/handler/lixian/get_lixian_list.php'
-        res = self.__request(urlv, {})
+        res = self.__request(LIST_URL)
         res = json.JSONDecoder().decode(res)
         if res["msg"] == _('未登录!'):
             res = json.JSONDecoder().decode(self.__getlogin())
@@ -234,9 +241,8 @@ class XF:
             _print("=======================END=========================\n")
 
     def get_download_info(self, filename, filehash):
-        urlv = 'http://lixian.qq.com/handler/lixian/get_http_url.php'
         data = {'hash': filehash, 'filename': filename, 'browser': 'other'}
-        result = self.__request(urlv, data)
+        result = self.__request(DOWNLOAD_INFO_URL, data)
         url = re.search(r'\"com_url\":\"(.+?)\"\,\"', result).group(1)
         cookie = re.search(r'\"com_cookie":\"(.+?)\"\,\"', result).group(1)
         return url, cookie
@@ -246,8 +252,7 @@ class XF:
         return "aria2c -c -s10 -x10 --header 'Cookie:ptisp=edu; FTN5K=%s' '%s'" % (cookie, url)
 
     def delete_task(self, task_id):
-        urlv = 'http://lixian.qq.com/handler/lixian/del_lixian_task.php'
-        return self.__request(urlv, {'mids': task_id})
+        return self.__request(DELETE_URL, {'mids': task_id})
 
     def add_task(self, url):
         filename = self.getfilename_url(url)
@@ -255,8 +260,7 @@ class XF:
                 "filename": filename,
                 "filesize": 0,
                 }
-        urlv = "http://lixian.qq.com/handler/lixian/add_to_lixian.php"
-        return self.__request(urlv, data)
+        return self.__request(ADD_URL, data)
 
     def __Login(self, needinput=False, verify=False):
         """
