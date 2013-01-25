@@ -250,13 +250,10 @@ class XF:
             self.filecom[num] = (re.search(r'\"com_cookie":\"(.+?)\"\,\"', str).group(1))
 
     def __chosetask(self):
-        _print("请选择操作,输入回车(Enter)下载任务\nA添加任务,D删除任务,R刷新离线任务列表")
+        _print("请选择操作,输入回车(Enter)下载任务\nA添加任务,R刷新离线任务列表")
         inputs = raw_input("st # ")
         if inputs.upper() == "A":
             self.__addtask()
-            self.main()
-        elif inputs.upper() == "D":
-            self.__deltask()
             self.main()
         elif inputs.upper() == "R":
             self.main()
@@ -286,30 +283,9 @@ class XF:
         self.__gethttp(lists)
         self.__download(lists)
 
-    def __deltask(self):
-        _print("请输入要删除的任务序号,数字之间用空格,逗号或其他非数字字符号分割.\n输入A删除所有任务:")
-        target = raw_input("dt # ").strip()
-        if target.upper() == "A":
-            lists = zip(range(1, len(self.filehash) + 1), [''] * len(self.filehash))
-        elif '-' in target:
-            nums = []
-            for i in target.split():
-                ran = target.split('-')
-                nums.extend(range(int(ran[0]), int(ran[1]) + 1))
-            lists = zip(nums, [''] * len(nums))
-        else:
-            lists = self.__RE.findall(target)
-        if lists == []:
-            _print("选择为空.")
-            self.__chosetask()
+    def delete_task(self, task_id):
         urlv = 'http://lixian.qq.com/handler/lixian/del_lixian_task.php'
-
-        for i in lists:
-            num = int(i[0]) - 1
-            data = {'mids': self.filemid[num]}
-            self.__request(urlv, data)
-        _print("任务删除完成")
-
+        return self.__request(urlv, {'mids': task_id})
 
     def __addtask(self):
         _print("请输入下载地址:")
