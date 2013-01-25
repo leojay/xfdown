@@ -42,18 +42,18 @@ def get_gtk(strs):
     hash = 5381
     for i in strs:
         hash += (hash << 5) + ord(i)
-    return hash & 0x7fffffff;
+    return hash & 0x7fffffff
 
 class LWPCookieJar(cookiejar.LWPCookieJar):
     def save(self, filename=None, ignore_discard=False, ignore_expires=False,userinfo=None):
         if filename is None:
             if self.filename is not None: filename = self.filename
-            else: raise ValueError(MISSING_FILENAME_TEXT)
+            else: raise ValueError(cookiejar.MISSING_FILENAME_TEXT)
 
         if not os.path.exists(filename):
           f=open(filename,'w')
           f.close()
-        f = open(filename, "r+")
+        f = open(filename, "rb+")
         try:
             if userinfo:
                 f.seek(0)
