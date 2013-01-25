@@ -58,10 +58,9 @@ class LWPCookieJar(cookiejar.LWPCookieJar):
             else: raise ValueError(cookiejar.MISSING_FILENAME_TEXT)
 
         if not os.path.exists(filename):
-            f = open(filename, 'w')
-            f.close()
-        f = open(filename, "rb+")
-        try:
+            open(filename, 'w').close()
+
+        with open(filename, "rb+") as f:
             if userinfo:
                 f.seek(0)
                 f.write("#LWP-Cookies-2.0\n")
@@ -70,8 +69,6 @@ class LWPCookieJar(cookiejar.LWPCookieJar):
                 f.seek(len(''.join(f.readlines()[:2])))
             f.truncate()
             f.write(self.as_lwp_str(ignore_discard, ignore_expires))
-        finally:
-            f.close()
 
 
 class XF:
@@ -383,14 +380,11 @@ class XF:
         登录
         """
         if not needinput and not verify:
-            try:
-                f = open(self.__cookiepath)
+            with open(self.__cookiepath) as f:
                 line = f.readlines()[1].strip()
                 lists = line.split("#")
                 self.__qq = lists[1]
                 self.hashpasswd = lists[2]
-            finally:
-                f.close()
         if not hasattr(self, "hashpasswd") or needinput:
             self.__qq = raw_input('QQ：')
             import getpass
@@ -418,6 +412,12 @@ def usage():
     print("  -h,--help\tshow this usage and exit.")
     print("  -d <dir>,--downloaddir=<dir>\n\tset the download dir.")
     print("\n\nsee https://github.com/kikyous/xfdown for most newest version and more information")
+
+def main():
+    xf = XF()
+
+if __name__ == '__main__':
+    main()
 
 try:
     xf = XF()
