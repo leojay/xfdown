@@ -165,7 +165,6 @@ class XF:
 
     def main(self):
         self.__getlist()
-        self.__chosetask()
 
     def getfilename_url(self, url):
         url = url.strip()
@@ -200,7 +199,6 @@ class XF:
                 self.main()
         elif not res["data"]:
             print(_('无离线任务!'))
-            self.__addtask()
             self.main()
         else:
             self.filename = []
@@ -235,50 +233,17 @@ class XF:
                 _print(out)
             _print("=======================END=========================\n")
 
-    def __gethttp(self, filelist):
-        """
-        获取任务下载连接以及FTN5K值
-        """
+    def get_download_info(self, filename, filehash):
         urlv = 'http://lixian.qq.com/handler/lixian/get_http_url.php'
-        self.filehttp = [''] * len(self.filehash)
-        self.filecom = [''] * len(self.filehash)
-        for num in filelist:
-            num = int(num[0]) - 1
-            data = {'hash': self.filehash[num], 'filename': self.filename[num], 'browser': 'other'}
-            str = self.__request(urlv, data)
-            self.filehttp[num] = (re.search(r'\"com_url\":\"(.+?)\"\,\"', str).group(1))
-            self.filecom[num] = (re.search(r'\"com_cookie":\"(.+?)\"\,\"', str).group(1))
+        data = {'hash': filehash, 'filename': filename, 'browser': 'other'}
+        result = self.__request(urlv, data)
+        url = re.search(r'\"com_url\":\"(.+?)\"\,\"', result).group(1)
+        cookie = re.search(r'\"com_cookie":\"(.+?)\"\,\"', result).group(1)
+        return url, cookie
 
-    def __chosetask(self):
-        _print("请选择操作,输入回车(Enter)下载任务\nR刷新离线任务列表")
-        inputs = raw_input("st # ")
-        if inputs.upper() == "R":
-            self.main()
-        else:
-            self.__getdownload()
-            self.main()
-
-    def __getdownload(self):
-        _print("请输入要下载的任务序号,数字之间用空格或其他字符分隔.或者使用-来选择连续任务\n输入A下载所有任务:")
-        _print("(数字后跟p只打印下载命令而不下载，比如1p2p3)")
-        target = raw_input("dl # ").strip()
-        if target.upper() == "A":
-            lists = zip(range(1, len(self.filehash) + 1), [''] * len(self.filehash))
-        elif '-' in target:
-            nums = []
-            for i in target.split(' '):
-                ran = i.split('-')
-                nums.extend(range(int(ran[0]), int(ran[1]) + 1))
-            lists = zip(nums, [''] * len(nums))
-        else:
-            lists = self.__RE.findall(target)
-        if lists == []:
-            _print("选择为空.")
-            self.__chosetask()
-            return
-
-        self.__gethttp(lists)
-        self.__download(lists)
+    def get_aria2c_cmd_line(self, filename, filehash):
+        url, cookie = self.get_download_info(filename, filehash)
+        return "aria2c -c -s10 -x10 --header 'Cookie:ptisp=edu; FTN5K=%s' '%s'" % (cookie, url)
 
     def delete_task(self, task_id):
         urlv = 'http://lixian.qq.com/handler/lixian/del_lixian_task.php'
@@ -292,23 +257,6 @@ class XF:
                 }
         urlv = "http://lixian.qq.com/handler/lixian/add_to_lixian.php"
         return self.__request(urlv, data)
-
-    def __download(self, lists):
-        cmds = []
-
-        for i in lists:
-            num = int(i[0]) - 1
-            cmd = "aria2c -c -s10 -x10 --header 'Cookie:ptisp=edu; FTN5K=%s' '%s'" % (self.filecom[num], self.filehttp[num])
-            if sys.version_info >= (3, 0):
-                pass
-            else:
-                cmd = cmd.encode("u8")
-
-            if i[1].upper() == 'P':
-                print('\n%s' % cmd)
-            else:
-                cmds.append(cmd)
-
 
     def __Login(self, needinput=False, verify=False):
         """
