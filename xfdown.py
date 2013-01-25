@@ -52,22 +52,13 @@ def get_gtk(strs):
 
 
 class LWPCookieJar(cookiejar.LWPCookieJar):
-    def save(self, filename=None, ignore_discard=False, ignore_expires=False, userinfo=None):
+    def save(self, filename=None, ignore_discard=False, ignore_expires=False, userinfo=''):
         if filename is None:
             if self.filename is not None: filename = self.filename
             else: raise ValueError(cookiejar.MISSING_FILENAME_TEXT)
 
-        if not os.path.exists(filename):
-            open(filename, 'w').close()
-
-        with open(filename, "rb+") as f:
-            if userinfo:
-                f.seek(0)
-                f.write("#LWP-Cookies-2.0\n")
-                f.write("#%s\n" % userinfo)
-            else:
-                f.seek(len(''.join(f.readlines()[:2])))
-            f.truncate()
+        with open(filename, "wb") as f:
+            f.write("#LWP-Cookies-2.0\n#%s\n" % (userinfo or ''))
             f.write(self.as_lwp_str(ignore_discard, ignore_expires))
 
 
@@ -202,12 +193,8 @@ class XF:
     def __getlogin(self):
         self.__request(url="http://lixian.qq.com/handler/lixian/check_tc.php", data={}, savecookie=True)
         urlv = 'http://lixian.qq.com/handler/lixian/do_lixian_login.php'
-        f = open(self.__cookiepath)
-        fi = re.compile('skey="([^"]+)"')
-        skey = fi.findall("".join(f.readlines()))[0]
-        f.close()
-        str = self.__request(url=urlv, data={"g_tk": get_gtk(skey)}, savecookie=True)
-        return str
+        skey = re.findall('skey="([^"]+)"', open(self.__cookiepath).read())[0]
+        return self.__request(url=urlv, data={"g_tk": get_gtk(skey)}, savecookie=True)
 
     def __getlist(self):
         """
@@ -340,9 +327,9 @@ class XF:
         _print("请输入下载地址:")
         url = raw_input()
         filename = self.getfilename_url(url)
-        data = {"down_link": url,\
-                "filename": filename,\
-                "filesize": 0,\
+        data = {"down_link": url,
+                "filename": filename,
+                "filesize": 0,
                 }
         urlv = "http://lixian.qq.com/handler/lixian/add_to_lixian.php"
         str = self.__request(urlv, data)
@@ -363,17 +350,6 @@ class XF:
             else:
                 cmds.append(cmd)
 
-        """
-        调用aria2进行下载
-
-        """
-        for i in cmds:
-            os.system("cd %s && %s" % (self._downpath, i))
-            try:
-                subprocess.Popen(["notify-send", "xfdown: 下载完成!"])
-            except:
-                if os.name == 'posix':
-                    _print("notify-send error,you should have libnotify-bin installed.")
 
     def __Login(self, needinput=False, verify=False):
         """
@@ -415,30 +391,7 @@ def usage():
 
 def main():
     xf = XF()
+    xf.start()
 
 if __name__ == '__main__':
     main()
-
-try:
-    xf = XF()
-    opts, args = getopt.getopt(sys.argv[1:], "hd:p:", ["help", "downloaddir="])
-    for o, v in opts:
-        if o in ("-h", "--help"):
-            usage()
-            sys.exit()
-        elif o in ("-d", "--downloaddir"):
-            xf._downpath = os.path.abspath(os.path.expanduser(v))
-        else:
-            assert False, "unhandled option"
-    if not hasattr(xf, "_downpath"):
-        xf._downpath = os.path.expanduser("~/下载")
-    os.makedirs(xf._downpath) if not os.path.exists(xf._downpath) else None
-
-    xf.start()
-except KeyboardInterrupt:
-    print(" exit now.")
-    sys.exit(2)
-except getopt.GetoptError as err:
-    print(err)
-    usage()
-    sys.exit(2)
