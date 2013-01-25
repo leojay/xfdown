@@ -250,12 +250,9 @@ class XF:
             self.filecom[num] = (re.search(r'\"com_cookie":\"(.+?)\"\,\"', str).group(1))
 
     def __chosetask(self):
-        _print("请选择操作,输入回车(Enter)下载任务\nA添加任务,R刷新离线任务列表")
+        _print("请选择操作,输入回车(Enter)下载任务\nR刷新离线任务列表")
         inputs = raw_input("st # ")
-        if inputs.upper() == "A":
-            self.__addtask()
-            self.main()
-        elif inputs.upper() == "R":
+        if inputs.upper() == "R":
             self.main()
         else:
             self.__getdownload()
@@ -287,16 +284,14 @@ class XF:
         urlv = 'http://lixian.qq.com/handler/lixian/del_lixian_task.php'
         return self.__request(urlv, {'mids': task_id})
 
-    def __addtask(self):
-        _print("请输入下载地址:")
-        url = raw_input()
+    def add_task(self, url):
         filename = self.getfilename_url(url)
         data = {"down_link": url,
                 "filename": filename,
                 "filesize": 0,
                 }
         urlv = "http://lixian.qq.com/handler/lixian/add_to_lixian.php"
-        str = self.__request(urlv, data)
+        return self.__request(urlv, data)
 
     def __download(self, lists):
         cmds = []
