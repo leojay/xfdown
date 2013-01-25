@@ -3,6 +3,8 @@
 from __future__ import division
 
 import subprocess
+import random
+import json, os, sys, re, hashlib
 
 try:
     import urllib as parse
@@ -13,9 +15,6 @@ except:
     from http import cookiejar
 
     raw_input = input
-import random, time
-import json, os, sys, re, hashlib
-import getopt
 
 def _(string):
     try:
@@ -113,7 +112,7 @@ class XF:
         else:
             self.__Login(True)
 
-    def __request(self, url, data=None, savecookie=False):
+    def __request(self, url, data=None):
         """
             请求url
         """
@@ -122,18 +121,19 @@ class XF:
             fp = request.urlopen(url, data)
         else:
             fp = request.urlopen(url)
+        result = fp.read()
         try:
-            str = fp.read().decode('utf-8')
+            result = result.decode('utf-8')
         except UnicodeDecodeError:
-            str = fp.read()
-        if savecookie == True:
-            if hasattr(self, "pswd"):
-                self.cookieJar.save(ignore_discard=True, ignore_expires=True, userinfo="%s#%s" % (self.__qq, self.hashpasswd))
-            else:
-                self.cookieJar.save(ignore_discard=True, ignore_expires=True)
+            pass
+
+        if hasattr(self, "pswd"):
+            self.cookieJar.save(ignore_discard=True, ignore_expires=True, userinfo="%s#%s" % (self.__qq, self.hashpasswd))
+        else:
+            self.cookieJar.save(ignore_discard=True, ignore_expires=True)
 
         fp.close()
-        return str
+        return result
 
     def __getverifycode(self):
         urlv = 'http://check.ptlogin2.qq.com/check?uin=%s&appid=567008010&r=%s' % (self.__qq, random.Random().random())
@@ -191,10 +191,10 @@ class XF:
         return filename.split("?")[0]
 
     def __getlogin(self):
-        self.__request(url="http://lixian.qq.com/handler/lixian/check_tc.php", data={}, savecookie=True)
+        self.__request(url="http://lixian.qq.com/handler/lixian/check_tc.php", data={})
         urlv = 'http://lixian.qq.com/handler/lixian/do_lixian_login.php'
         skey = re.findall('skey="([^"]+)"', open(self.__cookiepath).read())[0]
-        return self.__request(url=urlv, data={"g_tk": get_gtk(skey)}, savecookie=True)
+        return self.__request(url=urlv, data={"g_tk": get_gtk(skey)})
 
     def __getlist(self):
         """
