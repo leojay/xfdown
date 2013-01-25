@@ -73,8 +73,6 @@ class XF:
      Login QQ
     """
 
-    _player="totem"
-
     __cookiepath = '%s/cookie'%module_path
     __verifyimg  = '%s/verify.jpg'%module_path
     __RE=re.compile("(\d+) *([^\d ]+)?")
@@ -275,7 +273,7 @@ class XF:
                 self.filecom[num]=(re.search(r'\"com_cookie":\"(.+?)\"\,\"',str).group(1))
        
     def __chosetask(self):
-        _print ("请选择操作,输入回车(Enter)下载任务\nA添加任务,O在线观看,D删除任务,R刷新离线任务列表")
+        _print ("请选择操作,输入回车(Enter)下载任务\nA添加任务,D删除任务,R刷新离线任务列表")
         inputs=raw_input("st # ")
         if inputs.upper()=="A":
             self.__addtask()
@@ -284,9 +282,6 @@ class XF:
             self.__deltask()
             self.main()
         elif inputs.upper()=="R":
-            self.main()
-        elif inputs.upper()=="O":
-            self.__online()
             self.main()
         else:
             self.__getdownload()
@@ -349,23 +344,6 @@ class XF:
                 }
         urlv="http://lixian.qq.com/handler/lixian/add_to_lixian.php"
         str = self.__request(urlv,data)
-
-    def __online(self):
-        _print("输入需要在线观看的任务序号")
-        num = int(raw_input())-1
-        self.__gethttp([(num+1,'')])
-        _print("正在缓冲，马上开始播放")
-        filename=_(self.filename[num])
-        cmd=['wget', '-c', '-O', filename, '--header', 'Cookie:FTN5K=%s'%self.filecom[num], self.filehttp[num]]
-
-        subprocess.Popen(cmd,cwd=_(self._downpath))
-        time.sleep(5)
-        cmd=[self._player, filename]
-        try:
-          subprocess.Popen(cmd,cwd=_(self._downpath))
-        except:
-          _print("%s 没有安装"%self._player)
-
 
     def __download(self,lists):
         cmds=[]
@@ -433,19 +411,16 @@ def usage():
     print("QQxf offline download utility (you need aria2 installed to use).\n")
     print("  -h,--help\tshow this usage and exit.")
     print("  -d <dir>,--downloaddir=<dir>\n\tset the download dir.")
-    print("  -p <player>,--player=<player>\n\tset the player.")
     print("\n\nsee https://github.com/kikyous/xfdown for most newest version and more information")
 try:
     xf = XF()
-    opts, args = getopt.getopt(sys.argv[1:], "hd:p:", ["help", "downloaddir=","player="])
+    opts, args = getopt.getopt(sys.argv[1:], "hd:p:", ["help", "downloaddir="])
     for o, v in opts:
         if o in ("-h", "--help"):
             usage()
             sys.exit()
         elif o in ("-d", "--downloaddir"):
             xf._downpath=os.path.abspath(os.path.expanduser(v))
-        elif o in ("-p", "--player"):
-            xf._player=v
         else:
             assert False, "unhandled option"
     if not hasattr(xf,"_downpath"):
