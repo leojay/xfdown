@@ -259,9 +259,9 @@ def download_task(cmd, task):
     try:
         if exists('stop'):
             return
-        subprocess.call(cmd)
-        with xf_lock:
-            xf.delete_task(task)
+        if subprocess.call(cmd) == 0:
+            with xf_lock:
+                xf.delete_task(task)
     finally:
         semaphore.release()
 
@@ -273,14 +273,16 @@ def main():
 
     for task in xf.list_tasks():
         if task.is_completed():
+            cmd_line = xf.get_axel_cmd_line(task)
+
             name = task.get_native_name()
-            print 'Downloading:', name
             dir = dirname(name)
             if dir and not exists(dir):
                 os.makedirs(dir)
-            semaphore.acquire()
 
-            threading.Thread(target=download_task, args=(xf.get_axel_cmd_line(task), task)).start()
+            semaphore.acquire()
+            print 'Downloading:', name
+            threading.Thread(target=download_task, args=(cmd_line, task)).start()
 
     for i in range(N):
         semaphore.acquire()
