@@ -287,6 +287,8 @@ def main():
     for i in range(N):
         semaphore.acquire()
 
+    if exists('stop'):
+        os.unlink('stop')
 
 if __name__ == '__main__':
     main()
